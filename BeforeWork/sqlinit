@@ -1,0 +1,26 @@
+CREATE TABLE `MetaObject` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `name` varchar(100) NOT NULL COMMENT '名称',
+  `label` nvarchar(50) COMMENT '名称',
+  `description` nvarchar(255) COMMENT '描述',
+  `ispublic` tinyint(1) NOT NULL DEFAULT '1' COMMENT '是否发布',
+  `createby` bigint(20) unsigned NOT NULL COMMENT '创建人ID',
+  `modifiedby` bigint(20) unsigned NOT NULL COMMENT '修改人ID',
+  `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updatetime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='元数据对象记录';
+
+
+CREATE TABLE `MetaField` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `fk_metaobject_id` bigint(20) unsigned NOT NULL COMMENT 'fk_metaobject_id',
+  `name` varchar(100) NOT NULL COMMENT '名称',
+  `label` nvarchar(50) COMMENT '名称',
+  `description` nvarchar(255) COMMENT '描述',
+  `createby` bigint(20) unsigned NOT NULL COMMENT '创建人ID',
+  `modifiedby` bigint(20) unsigned NOT NULL COMMENT '修改人ID',
+  `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updatetime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='元数据字段记录';
