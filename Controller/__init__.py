@@ -29,11 +29,11 @@ def create_app(config, enable_config_file=False):
     """
     app = create_flask_app(config, enable_config_file)
 
-    # # 创建Snowflake ID worker
-    # from utils.snowflake.id_worker import IdWorker
-    # app.id_worker = IdWorker(app.config['DATACENTER_ID'],
-    #                          app.config['WORKER_ID'],
-    #                          app.config['SEQUENCE'])
+    # 创建Snowflake ID worker
+    from utils.snowflake.id_worker import IdWorker
+    app.id_worker = IdWorker(app.config['DATACENTER_ID'],
+                             app.config['WORKER_ID'],
+                             app.config['SEQUENCE'])
 
     # # 限流器
     # from utils.limiter import limiter as lmt
@@ -111,6 +111,10 @@ def create_app(config, enable_config_file=False):
     # 注册元数据模块蓝图
     from .resources.metaobject import metaobject_bp
     app.register_blueprint(metaobject_bp)
+    
+     # 注册业务数据模块蓝图
+    from .resources.dataobject import data_bp
+    app.register_blueprint(data_bp)
 
     # # 注册新闻模块蓝图
     # from .resources.news import news_bp

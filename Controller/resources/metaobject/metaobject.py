@@ -32,6 +32,8 @@ class MetaObjectResource(Resource):
         args = json_parser.parse_args()
 
         obj = MetaObject.query.filter_by(name=args.name).first()
+        if obj == None:return None
+        
         result = {
             'id': obj.id,
             'name': obj.name,
@@ -49,6 +51,7 @@ class MetaObjectResource(Resource):
         label = args.label
         description = args.description
         obj = MetaObject(
+            id = current_app.id_worker.get_id(),
             name = name,
             label = label,
             description = description,
@@ -102,6 +105,7 @@ class MetaFieldResource(Resource):
         label = args.label
         description = args.description
         obj = MetaField(
+            id = current_app.id_worker.get_id(),
             fk_metaobject_id = fk_metaobject_id,
             name = name,
             label = label,

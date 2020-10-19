@@ -16,7 +16,7 @@ class MongoDB:
         if db not in client.list_database_names():
             print("数据库不存在！")
         if collection not in self.db.list_collection_names():
-            print("表不存在！")
+            db.createCollection(collection)
 
     def __str__(self):
         """数据库基本信息"""
@@ -61,26 +61,41 @@ class MongoDB:
         result = self.collection.delete_many(kwargs)
         return result.deleted_count
 
-    def update(self, *args, **kwargs):
-        """更新一批数据
+    # def update(self, *args, **kwargs):
+        # """更新一批数据
 
-        :param args: dict类型的固定查询条件如{"author":"XerCis"}，循环查询条件一般为_id列表如[{'_id': ObjectId('1')}, {'_id': ObjectId('2')}]
-        :param kwargs: 要修改的值，如country="China", age=22
+        # :param args: dict类型的固定查询条件如{"author":"XerCis"}，循环查询条件一般为_id列表如[{'_id': ObjectId('1')}, {'_id': ObjectId('2')}]
+        # :param kwargs: 要修改的值，如country="China", age=22
+        # :return: 修改成功的条数
+        # """
+        # value = {"$set": kwargs}
+        # query = {}
+        # n = 0
+        # list(map(query.update, list(filter(lambda x: isinstance(x, dict), args))))  # 固定查询条件
+        # for i in args:
+            # if not isinstance(i, dict):
+                # for id in i:
+                    # query.update(id)
+                    # result = self.collection.update_one(query, value)
+                    # n += result.modified_count
+        # result = self.collection.update_many(query, value)
+        # return n + result.modified_count
+        
+    def update(self, ids, data):
+        """批量更新数据
+
+        :param ids: list类型，如["",""]
+        :param data: 要修改的值，如{"k1":"v1","k2":"v2"}   字典类型
         :return: 修改成功的条数
         """
-        value = {"$set": kwargs}
-        query = {}
-        n = 0
-        list(map(query.update, list(filter(lambda x: isinstance(x, dict), args))))  # 固定查询条件
-        for i in args:
-            if not isinstance(i, dict):
-                for id in i:
-                    query.update(id)
-                    result = self.collection.update_one(query, value)
-                    n += result.modified_count
-        result = self.collection.update_many(query, value)
+        value = {"$set": data}
+        n = 0        
+        for id in ids:
+            query = {"_id":ObjectId(id)}
+            result = self.collection.update_one(query, value)
+            n += result.modified_count
         return n + result.modified_count
-
+        
     def find(self, *args, **kwargs):
         """保留原接口"""
         return self.collection.find(*args, **kwargs)
@@ -96,48 +111,65 @@ class MongoDB:
         else:
             return [i for i in self.collection.find({})]
 
-    def find_col(self, *args, **kwargs):
-        """查找某一列数据
+   
+    def find_list(self, showcol, condition={}, orderby=None):
+        """查找数据
 
-        :param key: 某些字段，如"name","age"
-        :param value: 某些字段匹配，如gender="male"
+        :param showcol: 展示字段，如["name","age"]  list形式
+        :param condition: 匹配字段，如{"gender":"male"}   dict形式
+        :param orderby: 排序字段，如[("UserName",pymongo.ASCENDING)]   list形式
         :return:
         """
         key_dict = {"_id": 0}  # 不显示_id
-        key_dict.update({i: 1 for i in args})
-        return [i for i in self.collection.find(kwargs, key_dict)]
+        key_dict.update({i: 1 for i in showcol})
+        result = self.collection.find(condition, key_dict).sort(orderby)
+        return [i for i in result]
+    
+    def find_list_page(self, showcol, condition={}, orderby=None, page_size=10,page_no=1):
+        """分页查找数据
+
+        :param showcol: 展示字段，如["name","age"]  list形式
+        :param condition: 匹配字段，如{"gender":"male"}   dict形式
+        :param orderby: 排序字段，如[("UserName",pymongo.ASCENDING)]   list形式
+        :return:
+        """
+        key_dict = {"_id": 0}  # 不显示_id
+        key_dict.update({i: 1 for i in showcol})
+        skip = page_size * (page_no - 1)
+        result = self.collection.find(condition, key_dict).sort(orderby).limit(page_size).skip(skip)
+        return [i for i in result]
 
 
-if __name__ == '__main__':
-    """连接"""
-    # 常量定义
-    uri = "mongodb://localhost:27017/"
-    db = "test"
-    collection = "test"
-    mongodb = MongoDB(uri, db, collection)  # 连接数据库
-    print(mongodb)  # 基本信息
+# if __name__ == '__main__':
+    # """连接"""
+    #常量定义
+    # uri = "mongodb://localhost:27017/"
+    # db = "test"
+    # collection = "test"
+    # mongodb = MongoDB(uri, db, collection)  # 连接数据库
+    # print(mongodb)  # 基本信息
 
-    """增"""
-    mongodb.insert(author="XerCis", gender="male")  # 插入一条数据
-    mongodb.insert({"country": "China"})  # 插入一条数据，dict
-    mongodb.insert([{"country": "Japan"}, {"country": "Korea"}])  # 插入一批数据，dict的list
-    result = mongodb.insert(({"country": "American"}, {"country": "Australia"}))  # 插入一批数据，dict的tuple
-    # mongodb.insert({"country": "China"}, [{"country": "Japan"}, {"country": "Korea"}], country="American")# 多类型传参
-    print(result.inserted_ids)  # 添加的数据在库中的_id
-    print(len(mongodb))  # 表的数据条数
-    print(mongodb.find_all())  # 所有查询结果
+    # """增"""
+    # mongodb.insert(author="XerCis", gender="male")  # 插入一条数据
+    # mongodb.insert({"country": "China"})  # 插入一条数据，dict
+    # mongodb.insert([{"country": "Japan"}, {"country": "Korea"}])  # 插入一批数据，dict的list
+    # result = mongodb.insert(({"country": "American"}, {"country": "Australia"}))  # 插入一批数据，dict的tuple
+    #mongodb.insert({"country": "China"}, [{"country": "Japan"}, {"country": "Korea"}], country="American")# 多类型传参
+    # print(result.inserted_ids)  # 添加的数据在库中的_id
+    # print(len(mongodb))  # 表的数据条数
+    # print(mongodb.find_all())  # 所有查询结果
 
-    """删"""
-    print(mongodb.delete(country="Japan"))  # 删除国家为日本的所有记录
-    print(mongodb.delete(country={"$regex": "^A"}))  # 删除国家开头为A的所有记录
-    # print(mongodb.delete({"country": {"$regex": "^A"}}))#效果同上
+    # """删"""
+    # print(mongodb.delete(country="Japan"))  # 删除国家为日本的所有记录
+    # print(mongodb.delete(country={"$regex": "^A"}))  # 删除国家开头为A的所有记录
+    #print(mongodb.delete({"country": {"$regex": "^A"}}))#效果同上
 
-    """改"""
-    id = mongodb.find_col("_id")  # 查询所有_id
-    print(id)
-    print(mongodb.update(id, {"author": "XerCis"}, country="China", age=22, height=178))
-    print(mongodb.find_col(author="XerCis"))
+    # """改"""
+    # id = mongodb.find_col("_id")  # 查询所有_id
+    # print(id)
+    # print(mongodb.update(id, {"author": "XerCis"}, country="China", age=22, height=178))
+    # print(mongodb.find_col(author="XerCis"))
 
-    """查"""
-    print(mongodb.find_all(show_id=True))  # 所有查询结果，包含_id
-    print(mongodb.find_col("_id", "author", "gender", author="XerCis"))
+    # """查"""
+    # print(mongodb.find_all(show_id=True))  # 所有查询结果，包含_id
+    # print(mongodb.find_col("_id", "author", "gender", author="XerCis"))
