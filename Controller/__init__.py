@@ -113,7 +113,7 @@ def create_app(config, enable_config_file=False):
     app.register_blueprint(metaobject_bp)
     
      # 注册业务数据模块蓝图
-    from .resources.dataobject import data_bp
+    from .resources.data import data_bp
     app.register_blueprint(data_bp)
 
     # # 注册新闻模块蓝图

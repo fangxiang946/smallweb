@@ -6,14 +6,42 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.dialects.mysql import insert
 from flask_restful import inputs
 from Common.metadatas import db
-from Common.metadatas.metaobject import MetaObject,MetaField
+from Common.metadatas.metaobject import MetaObject, MetaField
 from Common.models.datahandler import Handler
 from Common.utils import parser
 import json
-
+import ast
 
 class DataResource(Resource):
-        
+
+    def get(self):
+        '''
+            1.check对象是否存在
+            2.根据条件进行搜索
+        '''
+
+        json_parser = RequestParser()
+        json_parser.add_argument('objectname', required=True, location='json')
+        json_parser.add_argument('condition', location='json')
+        json_parser.add_argument('orderby', location='json')
+        json_parser.add_argument('pagesize', location='json')
+        json_parser.add_argument('pageno', location='json')
+        json_parser.add_argument('objectid', location='json')
+        args = json_parser.parse_args()
+
+        obj = MetaObject.query.filter_by(name=args.objectname).first()
+        if obj is None:
+            return '对象不存在'
+
+        fields = MetaField.query.filter_by(fk_metaobject_id=obj.id).all()
+        if fields is None:
+            return '字段集不存在'
+        condition = None if args.condition is None else ast.literal_eval(args.condition)
+        fieldname_list = [i.name for i in fields]
+        query_result = Handler.query_page(args.objectname, fieldname_list, condition, args.orderby,
+                                          args.pagesize, args.pageno)
+        return query_result
+
     def post(self):
         '''
             1.check对象是否存在
@@ -21,55 +49,46 @@ class DataResource(Resource):
         '''
         
         json_parser = RequestParser()
-        json_parser.add_argument('metaobjectname', required=True, location='json')
+        json_parser.add_argument('objectname', required=True, location='json')
         json_parser.add_argument('method', required=True, location='json')
-        json_parser.add_argument('data', required=True, location='json')     
-        json_parser.add_argument('objectid', location='json')           
+        json_parser.add_argument('data', required=True, location='json')
         args = json_parser.parse_args()
         
-        obj = MetaObject.query.filter_by(name=args.metaobjectname).first()
-        if obj == None: return '对象不存在'
+        obj = MetaObject.query.filter_by(name=args.objectname).first()
+        if obj is None:
+            return '对象不存在'
                 
         fields = MetaField.query.filter_by(fk_metaobject_id=obj.id).all()
-        if fields == None: return '字段集不存在'
+        if fields is None:
+            return '字段集不存在'
         
-        dataresult = json.dumps(args.data)
-        
+        data = ast.literal_eval(args.data) #转成字典
         if args.method == 'add':
             #新增
-            Handler.insert(args.metaobjectname, dataresult)
-            
-        else:
+            if isinstance(data, dict):
+                data.update({"_id": current_app.id_worker.get_id()})
+            elif isinstance(data, list) or isinstance(data, tuple):
+                for i in data:
+                    if isinstance(i, dict):
+                        i.update({"_id": current_app.id_worker.get_id()})
+            Handler.insert(args.objectname, data)
+        elif args.method == 'update':
             #编辑
-            Handler.update(args.metaobjectname, args.objectid, dataresult)
-
+            Handler.update(args.objectname, data)
         return 'ok'
 
-class DataListResource(Resource):
-
-    def post(self):
-        '''
-            1.check对象是否存在
-            2.根据条件进行搜索
-        '''
-        
+    def delete(self):
         json_parser = RequestParser()
-        json_parser.add_argument('metaobjectname', required=True, location='json')
+        json_parser.add_argument('objectname', required=True, location='json')
         json_parser.add_argument('condition', location='json')
-        json_parser.add_argument('orderby', location='json')   
-        json_parser.add_argument('pagesize', location='json')     
-        json_parser.add_argument('pageno', location='json')             
-        json_parser.add_argument('objectid', location='json')           
         args = json_parser.parse_args()
-        
-        obj = MetaObject.query.filter_by(name=args.metaobjectname).first()
-        if obj == None: return '对象不存在'
-                
-        fields = MetaField.query.filter_by(fk_metaobject_id=obj.id).all()
-        if fields == None: return '字段集不存在'
-        
-        fieldname_list = [_ for i.name in fields]
-        query_result = Handler.query_page(args.metaobjectname, fieldname_list, args.condition, args.orderby, args.pagesize, args.pageno)
-        
-        return query_result
+
+        obj = MetaObject.query.filter_by(name=args.objectname).first()
+        if obj is None:
+            return '对象不存在'
+
+        condition = {} if args.condition is None else ast.literal_eval(args.condition)
+        result = Handler.delete(args.objectname, condition)
+        return {"result":result}
+
 

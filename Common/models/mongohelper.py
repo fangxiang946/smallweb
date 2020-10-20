@@ -1,7 +1,7 @@
 import pymongo
 
 
-class MongoDB:
+class MongoDB(object):
     def __init__(self, uri='mongodb://localhost:27017/', db='test', collection='test'):
         """初始化MongoDB数据库和表的信息并连接数据库
 
@@ -12,11 +12,12 @@ class MongoDB:
         client = pymongo.MongoClient(uri)
         self.db = client[db]  # 数据库
         self.collection = self.db[collection]  # 表
+        self.isExist = True
 
         if db not in client.list_database_names():
-            print("数据库不存在！")
+            self.isExist = False
         if collection not in self.db.list_collection_names():
-            db.createCollection(collection)
+            self.isExist = False
 
     def __str__(self):
         """数据库基本信息"""
@@ -33,20 +34,16 @@ class MongoDB:
         """表的数据条数"""
         return len(self)
 
-    def insert(self, *args, **kwargs):
-        """插入多条数据
-
-        :param args: 多条数据，可以是dict、dict的list或dict的tuple
-        :param kwargs: 单条数据，如name=XerCis, gender=male
-        :return: 添加的数据在库中的_id
+    def insert(self, data):
+        """插入数据
         """
         documents = []
-        for i in args:
-            if isinstance(i, dict):
-                documents.append(i)
-            else:
-                documents += [x for x in i]
-        documents.append(kwargs)
+        if isinstance(data, dict):
+            documents.append(data)
+        elif isinstance(data, list) or isinstance(data, tuple):
+            for i in data:
+                if isinstance(i, dict):
+                    documents.append(i)
         return self.collection.insert_many(documents)
 
     def delete(self, *args, **kwargs):
@@ -61,40 +58,41 @@ class MongoDB:
         result = self.collection.delete_many(kwargs)
         return result.deleted_count
 
-    # def update(self, *args, **kwargs):
-        # """更新一批数据
 
-        # :param args: dict类型的固定查询条件如{"author":"XerCis"}，循环查询条件一般为_id列表如[{'_id': ObjectId('1')}, {'_id': ObjectId('2')}]
-        # :param kwargs: 要修改的值，如country="China", age=22
-        # :return: 修改成功的条数
-        # """
-        # value = {"$set": kwargs}
-        # query = {}
-        # n = 0
-        # list(map(query.update, list(filter(lambda x: isinstance(x, dict), args))))  # 固定查询条件
-        # for i in args:
-            # if not isinstance(i, dict):
-                # for id in i:
-                    # query.update(id)
-                    # result = self.collection.update_one(query, value)
-                    # n += result.modified_count
-        # result = self.collection.update_many(query, value)
-        # return n + result.modified_count
-        
-    def update(self, ids, data):
-        """批量更新数据
+    def update(self, *args, **kwargs):
+        """更新一批数据
 
-        :param ids: list类型，如["",""]
-        :param data: 要修改的值，如{"k1":"v1","k2":"v2"}   字典类型
+        :param args: dict类型的固定查询条件如{"author":"XerCis"}，循环查询条件一般为_id列表如[{'_id': ObjectId('1')}, {'_id': ObjectId('2')}]
+        :param kwargs: 要修改的值，如country="China", age=22
         :return: 修改成功的条数
         """
-        value = {"$set": data}
-        n = 0        
-        for id in ids:
-            query = {"_id":ObjectId(id)}
-            result = self.collection.update_one(query, value)
-            n += result.modified_count
+        value = {"$set": kwargs}
+        query = {}
+        n = 0
+        list(map(query.update, list(filter(lambda x: isinstance(x, dict), args))))  # 固定查询条件
+        for i in args:
+            if not isinstance(i, dict):
+                for id in i:
+                    query.update(id)
+                    result = self.collection.update_one(query, value)
+                    n += result.modified_count
+        result = self.collection.update_many(query, value)
         return n + result.modified_count
+        
+    # def update(self, ids, data):
+    #     """批量更新数据
+    #
+    #     :param ids: list类型，如["",""]
+    #     :param data: 要修改的值，如{"k1":"v1","k2":"v2"}   字典类型
+    #     :return: 修改成功的条数
+    #     """
+    #     value = {"$set": data}
+    #     n = 0
+    #     for id in ids:
+    #         query = {"_id":id}
+    #         result = self.collection.update_one(query, value)
+    #         n += result.modified_count
+    #     return n + result.modified_count
         
     def find(self, *args, **kwargs):
         """保留原接口"""
@@ -106,13 +104,13 @@ class MongoDB:
         :param show_id: 是否显示_id，默认不显示
         :return:所有查询结果
         """
-        if show_id == False:
+        if show_id is False:
             return [i for i in self.collection.find({}, {"_id": 0})]
         else:
             return [i for i in self.collection.find({})]
 
    
-    def find_list(self, showcol, condition={}, orderby=None):
+    def find_list(self, showcol, condition=None, orderby=None):
         """查找数据
 
         :param showcol: 展示字段，如["name","age"]  list形式
@@ -120,12 +118,13 @@ class MongoDB:
         :param orderby: 排序字段，如[("UserName",pymongo.ASCENDING)]   list形式
         :return:
         """
-        key_dict = {"_id": 0}  # 不显示_id
+        key_dict = {"_id": 1}  # 显示_id
         key_dict.update({i: 1 for i in showcol})
+        condition = {} if condition is None else condition
         result = self.collection.find(condition, key_dict).sort(orderby)
         return [i for i in result]
     
-    def find_list_page(self, showcol, condition={}, orderby=None, page_size=10,page_no=1):
+    def find_list_page(self, showcol, condition=None, orderby=None, page_size=None,page_no=None):
         """分页查找数据
 
         :param showcol: 展示字段，如["name","age"]  list形式
@@ -133,9 +132,16 @@ class MongoDB:
         :param orderby: 排序字段，如[("UserName",pymongo.ASCENDING)]   list形式
         :return:
         """
-        key_dict = {"_id": 0}  # 不显示_id
+        if not self.isExist:
+            return []
+        key_dict = {"_id": 1}  # 显示_id
         key_dict.update({i: 1 for i in showcol})
+        page_size =10 if page_size is None else int(page_size)
+        page_no =1 if page_no is None else int(page_no)
         skip = page_size * (page_no - 1)
+        condition ={} if condition is None else condition
+        if orderby is None:
+            orderby = [("_id",pymongo.ASCENDING)]
         result = self.collection.find(condition, key_dict).sort(orderby).limit(page_size).skip(skip)
         return [i for i in result]
 

@@ -11,3 +11,6 @@ metaobject_api.representation('application/json')(output_json)
 metaobject_api.add_resource(MetaObjectListResource, '/metaobjectlist',endpoint='metaobjectlist')
 
 metaobject_api.add_resource(MetaObjectResource, '/metaobject',endpoint='metaobject')
+
+metaobject_api.add_resource(MetaFieldResource, '/metafield',endpoint='metafield')
+

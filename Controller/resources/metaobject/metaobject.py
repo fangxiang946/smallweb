@@ -28,12 +28,13 @@ class MetaObjectResource(Resource):
 
     def get(self):
         json_parser = RequestParser()
-        json_parser.add_argument('name', action='append', type=inputs.positive, required=True, location='json')
+        json_parser.add_argument('name', required=True, location='json')
         args = json_parser.parse_args()
 
         obj = MetaObject.query.filter_by(name=args.name).first()
-        if obj == None:return None
-        
+        if obj is None:
+            return
+
         result = {
             'id': obj.id,
             'name': obj.name,
@@ -82,25 +83,35 @@ class MetaFieldResource(Resource):
 
     def get(self):
         json_parser = RequestParser()
-        json_parser.add_argument('name', action='append', type=inputs.positive, required=True, location='json')
+        json_parser.add_argument('objectname', required=True, location='json')
         args = json_parser.parse_args()
 
-        obj = MetaField.query.filter_by(name=args.name).first()
-        result = {
-            'id': obj.id,
-            'name': obj.name,
-            'label': obj.label
-        }
+        obj = MetaObject.query.filter_by(name=args.objectname).first()
+        if obj is None:
+            return '无此对象'
+
+        fields = MetaField.query.filter_by(fk_metaobject_id = obj.id).all()
+        result = []
+        for field in fields:
+            result.append(dict(
+                id=field.id,
+                name=field.name,
+                label=field.label
+            ))
         return result
 
     def post(self):
         json_parser = RequestParser()
-        json_parser.add_argument('fk_metaobject_id', required=True, location='json')
+        json_parser.add_argument('objectname', required=True, location='json')
         json_parser.add_argument('name', required=True, location='json')
         json_parser.add_argument('label', location='json')
         json_parser.add_argument('description', location='json')
         args = json_parser.parse_args()
-        fk_metaobject_id = args.fk_metaobject_id
+        obj = MetaObject.query.filter_by(name=args.objectname).first()
+        if obj is None:
+            return '无此对象'
+
+        fk_metaobject_id = obj.id
         name = args.name
         label = args.label
         description = args.description
