@@ -52,6 +52,7 @@ class DataResource(Resource):
         json_parser.add_argument('objectname', required=True, location='json')
         json_parser.add_argument('method', required=True, location='json')
         json_parser.add_argument('data', required=True, location='json')
+        json_parser.add_argument('condition', location='json')
         args = json_parser.parse_args()
         
         obj = MetaObject.query.filter_by(name=args.objectname).first()
@@ -72,9 +73,13 @@ class DataResource(Resource):
                     if isinstance(i, dict):
                         i.update({"_id": current_app.id_worker.get_id()})
             Handler.insert(args.objectname, data)
-        elif args.method == 'update':
-            #编辑
+        elif args.method == 'createUpdate':
+            #整体更新
             Handler.update(args.objectname, data)
+        elif args.method == 'update' and args.condition is not None:
+            #指定条件和结果更新
+            condition = ast.literal_eval(args.condition)  # 转成字典
+            Handler.update(args.objectname, condition, data)
         return 'ok'
 
     def delete(self):

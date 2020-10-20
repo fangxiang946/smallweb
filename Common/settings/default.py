@@ -33,6 +33,10 @@ class DefaultConfig(object):
     SQLALCHEMY_TRACK_MODIFICATIONS = False  # 追踪数据的修改信号
     SQLALCHEMY_ECHO = True
 
+    #mongodb
+    MONGODB_URI = 'mongodb://localhost:27017/'
+    MONGODB_DB = 'test'
+
     # redis 哨兵
     REDIS_SENTINELS = [
         ('127.0.0.1', '26380'),

@@ -1,20 +1,18 @@
 import pymongo
-
+from Common.settings.default import DefaultConfig
 
 class MongoDB(object):
-    def __init__(self, uri='mongodb://localhost:27017/', db='test', collection='test'):
+    def __init__(self, collection='test'):
         """初始化MongoDB数据库和表的信息并连接数据库
 
-        :param uri: 连接名
-        :param db: 数据库名
         :param collection: 表名
         """
-        client = pymongo.MongoClient(uri)
-        self.db = client[db]  # 数据库
+        client = pymongo.MongoClient(DefaultConfig.MONGODB_URI)
+        self.db = client[DefaultConfig.MONGODB_DB]  # 数据库
         self.collection = self.db[collection]  # 表
         self.isExist = True
 
-        if db not in client.list_database_names():
+        if DefaultConfig.MONGODB_DB not in client.list_database_names():
             self.isExist = False
         if collection not in self.db.list_collection_names():
             self.isExist = False
@@ -59,40 +57,40 @@ class MongoDB(object):
         return result.deleted_count
 
 
-    def update(self, *args, **kwargs):
-        """更新一批数据
-
-        :param args: dict类型的固定查询条件如{"author":"XerCis"}，循环查询条件一般为_id列表如[{'_id': ObjectId('1')}, {'_id': ObjectId('2')}]
-        :param kwargs: 要修改的值，如country="China", age=22
-        :return: 修改成功的条数
-        """
-        value = {"$set": kwargs}
-        query = {}
-        n = 0
-        list(map(query.update, list(filter(lambda x: isinstance(x, dict), args))))  # 固定查询条件
-        for i in args:
-            if not isinstance(i, dict):
-                for id in i:
-                    query.update(id)
-                    result = self.collection.update_one(query, value)
-                    n += result.modified_count
-        result = self.collection.update_many(query, value)
-        return n + result.modified_count
-        
-    # def update(self, ids, data):
-    #     """批量更新数据
+    # def update(self, *args, **kwargs):
+    #     """更新一批数据
     #
-    #     :param ids: list类型，如["",""]
-    #     :param data: 要修改的值，如{"k1":"v1","k2":"v2"}   字典类型
+    #     :param args: dict类型的固定查询条件如{"author":"XerCis"}，循环查询条件一般为_id列表如[{'_id': ObjectId('1')}, {'_id': ObjectId('2')}]
+    #     :param kwargs: 要修改的值，如country="China", age=22
     #     :return: 修改成功的条数
     #     """
-    #     value = {"$set": data}
+    #     value = {"$set": kwargs}
+    #     query = {}
     #     n = 0
-    #     for id in ids:
-    #         query = {"_id":id}
-    #         result = self.collection.update_one(query, value)
-    #         n += result.modified_count
+    #     list(map(query.update, list(filter(lambda x: isinstance(x, dict), args))))  # 固定查询条件
+    #     for i in args:
+    #         if not isinstance(i, dict):
+    #             for id in i:
+    #                 query.update(id)
+    #                 result = self.collection.update_one(query, value)
+    #                 n += result.modified_count
+    #     result = self.collection.update_many(query, value)
     #     return n + result.modified_count
+
+    def createUpdate(self, data):
+        """创建or更新一批数据
+        :return: 修改成功的条数
+        """
+        return self.collection.save(data)
+        
+    def update(self, condition, value):
+        """批量更新数据
+            condition:字典形式，条件，更新符合条件的数据
+            value:字典形式，结果
+        :return: 修改成功的条数
+        """
+        value = {"$set": value}
+        return self.collection.update_many(condition, value)
         
     def find(self, *args, **kwargs):
         """保留原接口"""

@@ -2,19 +2,21 @@ from Common.models.mongohelper import MongoDB
 
 class Handler(object):
     
-    def insert( objectname, data):
+    def insert(objectname, data):
         """插入数据
-        :param data: 可以是kv、{}、[{}]、({})
+        :param data: 可以是kv、{}、[{}ß]、({})
         :return:
         """
         mongodb = MongoDB(collection=objectname)
-        mongodb.insert(data)
-        return
+        return mongodb.insert(data)
 
     def update(objectname, dic):
         mongodb = MongoDB(collection=objectname)
-        mongodb.update(dic)
-        return
+        return mongodb.createUpdate(dic)
+
+    def update(objectname, condition, value):
+        mongodb = MongoDB(collection=objectname)
+        return mongodb.update(condition, value)
 
     def delete(objectname, dic):
         mongodb = MongoDB(collection=objectname)
